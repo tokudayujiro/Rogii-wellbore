@@ -1,0 +1,11 @@
+deg4_blend0.25: 7.9665
+no_pp: 7.9714
+deg3_blend0.25: 7.9849
+deg2_blend0.25: 8.0200
+deg4_blend0.5: 8.0389
+deg3_blend0.5: 8.0971
+deg4_blend0.75: 8.1799
+deg2_blend0.5: 8.1950
+deg3_blend0.75: 8.2941
+deg2_blend0.75: 8.4750
+BEST: deg4_blend0.25
