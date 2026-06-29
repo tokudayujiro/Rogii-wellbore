@@ -1,0 +1,17 @@
+n_eval: 150
+carry_forward: 12.6059
+best_rmse: 7.7459
+best_scale: 8.0
+best_sg_win: 61
+best_alpha: 0.9
+top10:
+  7.7459 scale=8.0 sg=61 alpha=0.9
+  7.7482 scale=8.0 sg=31 alpha=0.9
+  7.7488 scale=8.0 sg=15 alpha=0.9
+  7.7489 scale=8.0 sg=7 alpha=0.9
+  7.7489 scale=8.0 sg=1 alpha=0.9
+  7.7658 scale=12.0 sg=61 alpha=0.9
+  7.7681 scale=12.0 sg=31 alpha=0.9
+  7.7686 scale=12.0 sg=15 alpha=0.9
+  7.7687 scale=12.0 sg=7 alpha=0.9
+  7.7687 scale=12.0 sg=1 alpha=0.9

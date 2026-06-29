@@ -1,0 +1,15 @@
+carry_forward: 12.8125
+pf8: 8.4187
+pf_alpha09: 8.1829
+hybrid: 8.1329
+hybrid+cat*0.25: 8.0271
+hybrid+cat*0.5: 8.0332
+hybrid+lgb+cat*0.25: 8.0339
+hybrid+lgb+cat*0.5: 8.0417
+hybrid+lgb*0.25: 8.0563
+hybrid+lgb*0.5: 8.1106
+hybrid+lgb*0.0: 8.1329
+hybrid+cat*0.0: 8.1329
+hybrid+lgb+cat*0.0: 8.1329
+hybrid+cat*0.75: 8.1417
+BEST: hybrid+cat*0.25 = 8.0271

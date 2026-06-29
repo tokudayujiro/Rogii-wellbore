@@ -1,0 +1,30 @@
+carry_forward: 12.8125
+pf: 8.4187
+pf_alpha09: 8.1829
+pf+resid*0.0: 8.4187
+pf+resid*0.25: 8.1507
+pf+resid*0.5: 8.1212
+pf+resid*0.75: 8.2868
+pf+resid*1.0: 8.6062
+best_shrink: 0.5
+best_stack: 8.1212
+feat_importance:
+  z: 4995
+  x_off: 3578
+  y_off: 3210
+  dist_from_ps: 2972
+  z_span: 2967
+  known_gr_mean: 2947
+  last_slope: 2771
+  n_eval: 2755
+  known_gr_std: 2676
+  pf_off: 2311
+  gr_sig: 2286
+  beam_off: 2086
+  idx_from_ps: 687
+  incl: 441
+  gr_rmean: 317
+  gr_dev_known: 147
+  gr: 35
+  gr_rstd: 19
+  dmd: 0

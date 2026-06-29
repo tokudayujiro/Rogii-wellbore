@@ -1,0 +1,6 @@
+n_eval: 200
+carry_forward: 13.6070
+pf: 8.3625
+blend: 8.1073
+best_alpha: 0.9
+sec_per_well: 2.70

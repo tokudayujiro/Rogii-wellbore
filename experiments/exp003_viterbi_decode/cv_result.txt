@@ -1,0 +1,5 @@
+carry_forward: 12.8136
+viterbi: 13.8309
+blend: 12.7643
+final_alpha: 0.2
+alpha_per_fold: [0.2, 0.2, 0.2, 0.2, 0.15]
