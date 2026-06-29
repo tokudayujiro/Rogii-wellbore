@@ -643,12 +643,36 @@ def load_combined_model():
 
     import joblib
 
-    hits = _g.glob("/kaggle/input/**/combined.joblib", recursive=True)
-    if not hits and os.path.exists("experiments/exp008_combined/artifacts/combined.joblib"):
-        hits = ["experiments/exp008_combined/artifacts/combined.joblib"]
-    if not hits:
-        raise FileNotFoundError("combined.joblib が見つかりません")
-    return joblib.load(hits[0])
+    # exp009 の rich 版を優先、無ければ exp008 版
+    for name, local in [
+        ("combined_rich.joblib", "experiments/exp009_rich_features/artifacts/combined_rich.joblib"),
+        ("combined.joblib", "experiments/exp008_combined/artifacts/combined.joblib"),
+    ]:
+        hits = _g.glob(f"/kaggle/input/**/{name}", recursive=True)
+        if not hits and os.path.exists(local):
+            hits = [local]
+        if hits:
+            return joblib.load(hits[0])
+    raise FileNotFoundError("combined*.joblib が見つかりません")
+
+
+def add_rich_features(feats):
+    """exp009 の派生特徴（9 個）を feats(eval 行) に追加。add_features と一致させる。"""
+    feats = feats.copy()
+    feats["pf_beam_diff"] = feats["pf_off"] - feats["beam_off"]
+    feats["dist2"] = feats["dist_from_ps"] ** 2
+    feats["frac_idx"] = feats["idx_from_ps"] / feats["n_eval"].clip(lower=1.0)
+    feats["abs_incl"] = feats["incl"].abs()
+    feats["z_off"] = feats["z"] - feats["z"].iloc[0]
+    feats["pf_slope"] = (
+        feats["pf_off"].diff().rolling(15, center=True, min_periods=1).mean().fillna(0.0)
+    )
+    feats["pf_curv"] = (
+        feats["pf_off"].diff().diff().rolling(15, center=True, min_periods=1).mean().fillna(0.0)
+    )
+    feats["gr_rmean_long"] = feats["gr"].rolling(101, center=True, min_periods=1).mean()
+    feats["gr_rstd_long"] = feats["gr"].rolling(101, center=True, min_periods=1).std().fillna(0.0)
+    return feats
 
 
 def combined_predict(hw, tw, bundle, *, n_particles, n_seeds):
@@ -669,7 +693,7 @@ def combined_predict(hw, tw, bundle, *, n_particles, n_seeds):
     if beam_ev.size != ev_idx.size:
         beam_ev = pf_pred.copy()
     hybrid = apply_selector_variant(selector_variant(hw), pf_by_scale, beam_ev, last_tvt)
-    feats = stack_features(hw, tw, pf_pred, beam_ev, ev_idx, ps)
+    feats = add_rich_features(stack_features(hw, tw, pf_pred, beam_ev, ev_idx, ps))
     model = bundle[bundle["learner"]]
     resid = model.predict(feats[bundle["features"]])
     out[ev_idx] = hybrid + bundle["shrink"] * resid

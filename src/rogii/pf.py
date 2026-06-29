@@ -166,6 +166,9 @@ def pf_allseeds(
     init_spr: float = INIT_SPR,
     seed_base: int = 0,
     calibrate: bool = False,
+    mom: float = MOM,
+    vn: float = VN,
+    pn: float = PN,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """PF を全シード走らせ (preds[n_seeds, n_ev], liks[n_seeds], ev_idx) を返す。
 
@@ -229,9 +232,9 @@ def pf_allseeds(
         n_particles,
         n_seeds,
         seed_base,
-        MOM,
-        VN,
-        PN,
+        mom,
+        vn,
+        pn,
         RP,
         RR,
         RESAMP,
@@ -257,6 +260,9 @@ def lik_pf(
     scale: float = SCALE,
     init_spr: float = INIT_SPR,
     seed_base: int = 0,
+    mom: float = MOM,
+    vn: float = VN,
+    pn: float = PN,
 ) -> np.ndarray:
     """予測対象（TVT_input が NaN の行）の TVT 推定を全長 n 配列で返す（既知部は NaN）。
 
@@ -264,7 +270,15 @@ def lik_pf(
     """
     out = np.full(hw.shape[0], np.nan)
     preds, liks, ev_idx = pf_allseeds(
-        hw, tw, n_particles=n_particles, n_seeds=n_seeds, init_spr=init_spr, seed_base=seed_base
+        hw,
+        tw,
+        n_particles=n_particles,
+        n_seeds=n_seeds,
+        init_spr=init_spr,
+        seed_base=seed_base,
+        mom=mom,
+        vn=vn,
+        pn=pn,
     )
     if preds.size == 0:
         return out

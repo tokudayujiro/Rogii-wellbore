@@ -1,0 +1,41 @@
+hybrid: 8.1329
+cat*0.4: 7.9714
+lgb+cat*0.4: 7.9756
+cat*0.5: 7.9760
+lgb+cat*0.5: 7.9800
+cat*0.25: 7.9973
+lgb+cat*0.25: 8.0008
+lgb*0.25: 8.0212
+lgb*0.4: 8.0229
+lgb*0.5: 8.0504
+cat*0.1: 8.0646
+BEST: hybrid+cat*0.4 = 7.9714
+cat_importance:
+  known_gr_mean: 14.0
+  z_span: 13.3
+  last_slope: 10.9
+  n_eval: 9.4
+  z: 8.6
+  x_off: 8.0
+  known_gr_std: 5.9
+  gr_sig: 5.7
+  y_off: 5.3
+  pf_beam_diff: 5.1
+  beam_off: 4.1
+  pf_off: 3.7
+  z_off: 3.2
+  frac_idx: 0.9
+  idx_from_ps: 0.6
+  dist2: 0.5
+  dist_from_ps: 0.4
+  gr_dev_known: 0.2
+  gr_rmean_long: 0.2
+  pf_curv: 0.1
+  pf_slope: 0.1
+  incl: 0.1
+  abs_incl: 0.0
+  gr_rmean: 0.0
+  dmd: 0.0
+  gr: 0.0
+  gr_rstd: 0.0
+  gr_rstd_long: 0.0
