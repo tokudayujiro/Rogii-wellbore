@@ -1,4 +1,16 @@
-# データサイエンス分析プロジェクトテンプレート
+# ROGII Wellbore Geology Prediction — 解法 / データサイエンステンプレート
+
+Kaggle「ROGII - Wellbore Geology Prediction」の TVT 予測解法（`src/rogii`, `experiments/`,
+`kaggle/`）と、その土台となる分析テンプレートを含むリポジトリ。
+
+> **解法の手法・成績は [kaggle/SUBMISSIONS.md](kaggle/SUBMISSIONS.md) と各 `experiments/expNNN/README.md` を参照。**
+> 現行ベスト: 粒子フィルタ + beam + per-well selector + LGB/CatBoost 残差スタッキング（非リーク, CV ~7.9 ft）。
+
+### クレジット / コンプライアンス
+- PF / beam / selector の発想はコンペ公開ノートブック（"ROGII SUPER SOLUTION", romantamrazov 他）を**参考**にし、**非リークで独自に再実装**。第三者ノート自体は再配布しない（repo 非収録）。
+- 過去に test=train リークのプローブ提出を 1 回だけ実施（ユーザー許可・効果なし・撤回済み）。詳細と方針は [kaggle/SUBMISSIONS.md](kaggle/SUBMISSIONS.md) のコンプライアンス注記を参照。生データ・認証情報は非コミット。
+
+---
 
 **Claude Code** および GitHub Copilot / Copilot Agent Mode / Copilot Cloud Agent と連携し、安全かつ一貫したデータ分析作業を行うためのリポジトリテンプレートです。
 
