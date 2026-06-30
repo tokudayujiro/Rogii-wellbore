@@ -1,0 +1,8 @@
+best_w: 1.0
+ens+resid*0.5: 7.8903
+ens+resid*0.4: 7.9018
+ens+resid*0.25: 7.9533
+hybrid_only: 8.1329
+ens_base_raw: 8.1329
+BEST: ens+resid*0.5 = 7.8903
+best_shrink: 0.5

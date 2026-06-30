@@ -357,6 +357,209 @@ def _pf_grid(tw_tvt, tw_gr, step=PF_GRID_STEP):
     return np.interp(tvt_g, tw_tvt, tw_gr).astype(np.float64), tmin, float(step)
 
 
+# --- 第2トラッカー pf_z（src/rogii/pf.py の移植）---
+PFZ_MOM, PFZ_VN, PFZ_PN, PFZ_GR_WT, PFZ_RP, PFZ_RV, PFZ_GR_WIN = (
+    0.993,
+    0.005,
+    0.01,
+    0.3,
+    0.2,
+    0.003,
+    5,
+)
+
+
+@njit(cache=True, nogil=True)
+def _pf_z_allseeds(
+    md_v,
+    z_v,
+    gr_v,
+    gr_sm_v,
+    gg_p,
+    gg_s,
+    vmin,
+    step,
+    gs,
+    ip,
+    iv,
+    beta,
+    icpt,
+    zsig,
+    n,
+    n_seeds,
+    seed_base,
+    mom,
+    vn,
+    pn,
+    gr_wt,
+    rp,
+    rv,
+    resamp,
+):
+    npts = len(md_v)
+    preds = np.empty((n_seeds, npts))
+    liks = np.empty(n_seeds)
+    pmax = vmin + len(gg_p) * step
+    for s in range(n_seeds):
+        np.random.seed(seed_base + s)
+        pos = np.empty(n)
+        vel = np.empty(n)
+        w = np.ones(n) / n
+        for j in range(n):
+            pos[j] = ip + 0.5 * np.random.randn()
+            vel[j] = iv + 0.02 * np.random.randn()
+        log_lik = 0.0
+        pm = md_v[0] - 1.0
+        pz = z_v[0] - 1.0
+        for i in range(npts):
+            dm = md_v[i] - pm
+            if dm < 1.0:
+                dm = 1.0
+            dzd = (z_v[i] - pz) / dm
+            ve = beta * dzd + icpt
+            for j in range(n):
+                vel[j] = mom * vel[j] + vn * np.random.randn()
+                pos[j] += vel[j] * dm + pn * np.random.randn()
+                if pos[j] < vmin - 50.0:
+                    pos[j] = vmin - 50.0
+                if pos[j] > pmax + 50.0:
+                    pos[j] = pmax + 50.0
+            avg_lk = 0.0
+            for j in range(n):
+                ep = _pf_interp1(gg_p, pos[j], vmin, step)
+                dp = (gr_v[i] - ep) / gs
+                lp = np.exp(-0.5 * dp * dp) if dp * dp < 600.0 else 0.0
+                if lp < 1e-300:
+                    lp = 1e-300
+                es = _pf_interp1(gg_s, pos[j], vmin, step)
+                ds = (gr_sm_v[i] - es) / (gs * 1.5)
+                lsm = np.exp(-0.5 * ds * ds) if ds * ds < 600.0 else 0.0
+                if lsm < 1e-300:
+                    lsm = 1e-300
+                lk = (1.0 - gr_wt) * lp + gr_wt * lsm
+                dv = (vel[j] - ve) / (zsig * 2.0 if zsig * 2.0 > 0.005 else 0.005)
+                lz = np.exp(-0.5 * dv * dv) if dv * dv < 600.0 else 0.0
+                if lz < 1e-300:
+                    lz = 1e-300
+                lk = lk * lz
+                if lk < 1e-300:
+                    lk = 1e-300
+                avg_lk += w[j] * lk
+                w[j] = w[j] * lk
+            if avg_lk < 1e-300:
+                avg_lk = 1e-300
+            log_lik += np.log(avg_lk)
+            ws = 0.0
+            for j in range(n):
+                ws += w[j]
+            if ws > 0.0:
+                for j in range(n):
+                    w[j] /= ws
+            else:
+                for j in range(n):
+                    w[j] = 1.0 / n
+            neff = 0.0
+            for j in range(n):
+                neff += w[j] * w[j]
+            if 1.0 / neff < resamp * n:
+                cum = np.empty(n)
+                c = 0.0
+                for j in range(n):
+                    c += w[j]
+                    cum[j] = c
+                u0 = np.random.uniform(0.0, 1.0 / n)
+                npos = np.empty(n)
+                nvel = np.empty(n)
+                ci = 0
+                for j in range(n):
+                    u = u0 + j / n
+                    while ci < n - 1 and cum[ci] < u:
+                        ci += 1
+                    npos[j] = pos[ci] + rp * np.random.randn()
+                    nvel[j] = vel[ci] + rv * np.random.randn()
+                for j in range(n):
+                    pos[j] = npos[j]
+                    vel[j] = nvel[j]
+                    w[j] = 1.0 / n
+            est = 0.0
+            for j in range(n):
+                est += w[j] * pos[j]
+            preds[s, i] = est
+            pm = md_v[i]
+            pz = z_v[i]
+        liks[s] = log_lik
+    return preds, liks
+
+
+def lik_pf_z(hw, tw, *, n_particles, n_seeds, scale, seed_base=0):
+    """pf_z（Z速度連成PF）予測（全長 n, 既知部 NaN）。"""
+    out = np.full(hw.shape[0], np.nan)
+    tw_s = tw.dropna(subset=["TVT", "GR"]).sort_values("TVT")
+    if len(tw_s) < 2:
+        return out
+    tw_tvt = tw_s["TVT"].to_numpy(float)
+    tw_gr = tw_s["GR"].to_numpy(float)
+    kn = hw[hw["TVT_input"].notna()]
+    ev_mask = hw["TVT_input"].isna().to_numpy()
+    if not ev_mask.any() or len(kn) == 0:
+        return out
+    ip = float(kn.iloc[-1]["TVT_input"])
+    tw_at_k = np.interp(kn["TVT_input"].to_numpy(float), tw_tvt, tw_gr)
+    gs = float(np.clip(np.nanstd(kn["GR"].fillna(0).to_numpy(float) - tw_at_k), 10.0, 60.0))
+    zk, tk, mk = (
+        kn["Z"].to_numpy(float),
+        kn["TVT_input"].to_numpy(float),
+        kn["MD"].to_numpy(float),
+    )
+    dz, dvt, dmd = np.diff(zk), np.diff(tk), np.diff(mk)
+    ok = dmd > 0
+    if ok.sum() >= 10:
+        vz, vt = dz[ok] / dmd[ok], dvt[ok] / dmd[ok]
+        c, *_ = np.linalg.lstsq(np.column_stack([vz, np.ones_like(vz)]), vt, rcond=None)
+        beta, icpt = float(c[0]), float(c[1])
+        zsig = max(float(np.std(vt - (c[0] * vz + c[1]))), 0.001)
+    else:
+        beta, icpt, zsig = -1.0, 0.0, 0.1
+    tail = kn.tail(20)
+    dvt2, dmd2 = np.diff(tail["TVT_input"].to_numpy(float)), np.diff(tail["MD"].to_numpy(float))
+    ok2 = dmd2 > 0
+    iv = float(np.median(dvt2[ok2] / dmd2[ok2])) if ok2.sum() >= 3 else 0.0
+    tw_gr_sm = pd.Series(tw_gr).rolling(PFZ_GR_WIN, center=True, min_periods=1).mean().to_numpy()
+    gg_p, gmin, gst = _pf_grid(tw_tvt, tw_gr)
+    gg_s, _, _ = _pf_grid(tw_tvt, tw_gr_sm)
+    gr_full = hw["GR"].interpolate(limit_direction="both").fillna(tw_gr.mean()).to_numpy(float)
+    gr_sm = pd.Series(gr_full).rolling(PFZ_GR_WIN, center=True, min_periods=1).mean().to_numpy()
+    ev_idx = np.where(ev_mask)[0]
+    preds, liks = _pf_z_allseeds(
+        hw["MD"].to_numpy(float)[ev_idx],
+        hw["Z"].to_numpy(float)[ev_idx],
+        gr_full[ev_idx],
+        gr_sm[ev_idx],
+        gg_p,
+        gg_s,
+        gmin,
+        gst,
+        gs,
+        ip,
+        iv,
+        beta,
+        icpt,
+        zsig,
+        n_particles,
+        n_seeds,
+        seed_base,
+        PFZ_MOM,
+        PFZ_VN,
+        PFZ_PN,
+        PFZ_GR_WT,
+        PFZ_RP,
+        PFZ_RV,
+        PF_RESAMP,
+    )
+    out[ev_idx] = combine_scale(preds, liks, scale)
+    return out
+
+
 def pf_allseeds(hw, tw, *, n_particles, n_seeds, init_spr=PF_INIT_SPR, seed_base=0):
     """PF を全シード走らせ (preds[n_seeds, n_ev], liks[n_seeds], ev_idx) を返す。"""
     empty = (np.empty((0, 0)), np.empty(0), np.empty(0, dtype=int))
@@ -643,8 +846,9 @@ def load_combined_model():
 
     import joblib
 
-    # exp009 の rich 版を優先、無ければ exp008 版
+    # exp013 pfz アンサンブル > exp009 rich > exp008 の順で優先
     for name, local in [
+        ("pfz_ensemble.joblib", "experiments/exp013_pfz_ensemble/artifacts/pfz_ensemble.joblib"),
         ("combined_rich.joblib", "experiments/exp009_rich_features/artifacts/combined_rich.joblib"),
         ("combined.joblib", "experiments/exp008_combined/artifacts/combined.joblib"),
     ]:
@@ -694,6 +898,9 @@ def combined_predict(hw, tw, bundle, *, n_particles, n_seeds):
         beam_ev = pf_pred.copy()
     hybrid = apply_selector_variant(selector_variant(hw), pf_by_scale, beam_ev, last_tvt)
     feats = add_rich_features(stack_features(hw, tw, pf_pred, beam_ev, ev_idx, ps))
+    if "pfz_off" in bundle["features"]:  # exp013: 第2トラッカー pf_z を特徴に追加
+        pfz = lik_pf_z(hw, tw, n_particles=n_particles, n_seeds=n_seeds, scale=8.0)
+        feats["pfz_off"] = pfz[ev_idx] - last_tvt
     model = bundle[bundle["learner"]]
     resid = model.predict(feats[bundle["features"]])
     out[ev_idx] = hybrid + bundle["shrink"] * resid
