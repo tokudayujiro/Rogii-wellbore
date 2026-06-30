@@ -846,8 +846,9 @@ def load_combined_model():
 
     import joblib
 
-    # exp013 pfz アンサンブル > exp009 rich > exp008 の順で優先
+    # exp014 tracker > exp013 pfz > exp009 rich > exp008 の順で優先
     for name, local in [
+        ("tracker.joblib", "experiments/exp014_tracker_disagreement/artifacts/tracker.joblib"),
         ("pfz_ensemble.joblib", "experiments/exp013_pfz_ensemble/artifacts/pfz_ensemble.joblib"),
         ("combined_rich.joblib", "experiments/exp009_rich_features/artifacts/combined_rich.joblib"),
         ("combined.joblib", "experiments/exp008_combined/artifacts/combined.joblib"),
@@ -898,11 +899,29 @@ def combined_predict(hw, tw, bundle, *, n_particles, n_seeds):
         beam_ev = pf_pred.copy()
     hybrid = apply_selector_variant(selector_variant(hw), pf_by_scale, beam_ev, last_tvt)
     feats = add_rich_features(stack_features(hw, tw, pf_pred, beam_ev, ev_idx, ps))
-    if "pfz_off" in bundle["features"]:  # exp013: 第2トラッカー pf_z を特徴に追加
+    bf = bundle["features"]
+    trk = ("pfz_off", "pf_pfz_diff", "pfz_beam_diff", "tracker_spread", "pfz_slope", "pfz_curv")
+    if any(f in bf for f in trk):  # exp013/014: 第2トラッカー pf_z 由来の特徴
         pfz = lik_pf_z(hw, tw, n_particles=n_particles, n_seeds=n_seeds, scale=8.0)
         feats["pfz_off"] = pfz[ev_idx] - last_tvt
-    model = bundle[bundle["learner"]]
-    resid = model.predict(feats[bundle["features"]])
+        feats["pf_pfz_diff"] = feats["pf_off"] - feats["pfz_off"]
+        feats["pfz_beam_diff"] = feats["pfz_off"] - feats["beam_off"]
+        feats["tracker_spread"] = feats[["pf_off", "pfz_off", "beam_off"]].std(axis=1)
+        feats["pfz_slope"] = (
+            feats["pfz_off"].diff().rolling(15, center=True, min_periods=1).mean().fillna(0.0)
+        )
+        feats["pfz_curv"] = (
+            feats["pfz_off"]
+            .diff()
+            .diff()
+            .rolling(15, center=True, min_periods=1)
+            .mean()
+            .fillna(0.0)
+        )
+    if bundle.get("blend"):  # exp014: LGB+CatBoost 平均
+        resid = 0.5 * (bundle["lgb"].predict(feats[bf]) + bundle["cat"].predict(feats[bf]))
+    else:
+        resid = bundle[bundle["learner"]].predict(feats[bf])
     out[ev_idx] = hybrid + bundle["shrink"] * resid
     return out
 

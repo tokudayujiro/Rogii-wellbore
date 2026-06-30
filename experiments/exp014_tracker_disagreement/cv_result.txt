@@ -1,0 +1,27 @@
+lgb+cat*0.6: 7.8278
+lgb+cat*0.5: 7.8332
+cat*0.6: 7.8339
+cat*0.5: 7.8384
+lgb+cat*0.4: 7.8562
+cat*0.4: 7.8606
+lgb*0.5: 7.8768
+lgb*0.4: 7.8837
+exp013_ref(7.890): 7.8900
+lgb*0.6: 7.8909
+BEST: lgb+cat*0.6 = 7.8278
+cat_importance:
+  known_gr_mean: 12.9
+  z_span: 12.3
+  last_slope: 9.4
+  n_eval: 8.3
+  z: 8.1
+  x_off: 7.4
+  pf_pfz_diff: 7.0
+  gr_sig: 4.9
+  known_gr_std: 4.6
+  beam_off: 4.0
+  pfz_beam_diff: 3.7
+  y_off: 3.3
+  pf_beam_diff: 2.8
+  z_off: 2.7
+  tracker_spread: 2.3
